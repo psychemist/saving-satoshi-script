@@ -169,6 +169,7 @@ const OpRunner = ({
   >(0)
   const [stateHistory, setStateHistory] = useState<MainState | []>([])
   const [startedTyping, setStartedTyping] = useState(false)
+  const [enabledOpcodes, setEnabledOpcodes] = useState(false)
   const { ref: arrowContainerRef } = useArrows()
   const scrollPosition = useHorizontalScroll(scrollRef)
 
@@ -297,6 +298,10 @@ const OpRunner = ({
     }
   }
 
+  const handleEnableOpcodes = (enableOpcodes) => {
+    setEnabledOpcodes(enableOpcodes)
+  }
+
   const handleNSequenceTimeChange = (event) => {
     if (!initialHeight) {
       setNSequenceTime(
@@ -318,8 +323,6 @@ const OpRunner = ({
   }
 
   const checkSuccessState = (tokens: T, state: State[], stack: StackType) => {
-    const filterToStringArray = tokens.map((token) => token.value)
-
     const doesStackValidate = () => {
       return (
         state.length === isFinalToken() &&
@@ -412,6 +415,7 @@ const OpRunner = ({
             items={prePopulate ? answerScript : undefined}
             prePopulate={prePopulate || step === 2}
             onItemsUpdate={handleDnDScript}
+            onEnableOpcodes={handleEnableOpcodes}
           />
         </div>
 

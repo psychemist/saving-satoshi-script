@@ -564,6 +564,22 @@ export const opFunctions: { [key: string]: Function } = {
       }
     }
   },
+  //Disbaled or experimental opcodes
+  OP_CAT: (stack: StackType) => {
+    if (!stack) return null
+    if (stack?.length < 2) {
+      return {
+        value: null,
+        error: 'OP_CAT requires at least two items on the stack',
+      }
+    }
+    const a = stack?.pop()!.toString()
+    const b = stack?.pop()!.toString()
+    return {
+      value: b?.concat(a),
+      error: null,
+    }
+  },
 }
 
 interface OpToken {
@@ -621,6 +637,7 @@ export const OpCodeTypes = {
   OP_DROP: 'stack',
   OP_VERIFY: 'stack',
   OP_NOP: 'stack',
+  OP_CAT: 'stack',
 }
 
 export const OpCodeHex = {
@@ -676,10 +693,18 @@ export const OpCodeHex = {
   OP_DROP: '75',
   OP_VERIFY: '69',
   OP_NOP: '61',
+
+  OP_CAT: '7e',
 }
 
-const disabledOpCodes = ['INITIAL_STACK']
+const internalOpCodes = ['INITIAL_STACK']
+
+const disabledOpCodes = ['OP_CAT']
 
 export const OpCodeArray = Object.keys(OpCodeTypes).filter(
-  (key) => !disabledOpCodes.includes(key)
+  (key) => !internalOpCodes.includes(key) && !disabledOpCodes.includes(key)
+)
+
+export const OpCodeArrayEnabled = Object.keys(OpCodeTypes).filter(
+  (key) => !internalOpCodes.includes(key)
 )

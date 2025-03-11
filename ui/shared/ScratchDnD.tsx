@@ -29,7 +29,8 @@ type StateType = {
   [key: string]: ItemType[]
 }
 
-const disabledOpCodes: string[] = ['INITIAL_STACK']
+const internalOpcodes: string[] = ['INITIAL_STACK']
+const experimentalOpCodes: string[] = ['OP_CAT']
 
 const reorder = (
   list: ItemType[],
@@ -85,8 +86,8 @@ const remove = (
   return sourceClone
 }
 
-const ITEMS: ItemType[] = Object.keys(OpCodeTypes)
-  .filter((key) => !disabledOpCodes.includes(key))
+let ITEMS: ItemType[] = Object.keys(OpCodeTypes)
+  .filter((key) => !internalOpcodes.includes(key))
   .map((item, index) => ({
     id: uuid(),
     index: index,
@@ -94,31 +95,18 @@ const ITEMS: ItemType[] = Object.keys(OpCodeTypes)
     category: OpCodeTypes[item],
   }))
 
-const groupedItems: Group[] = ITEMS.reduce(
-  (groups: Group[], item: ItemType) => {
-    const group = groups.find((g) => g.heading === item.category)
-    if (group) {
-      group.items.push(item)
-    } else {
-      groups.push({
-        heading: item.category,
-        items: [item],
-      })
-    }
-    return groups
-  },
-  []
-)
-
 interface ScratchDndProps {
   items?: string[]
   prePopulate?: boolean
   onItemsUpdate?: (items: string[]) => void
+  onEnableOpcodes: (enabledOpcodes: boolean) => void
 }
 
 interface ScratchDndState {
   dynamicState: StateType
+  enabledOpcodes: boolean
   opPushValues: { [key: string]: string }
+  groupedItems: Group[]
 }
 
 export default class ScratchDnd extends Component<
@@ -128,6 +116,7 @@ export default class ScratchDnd extends Component<
   constructor(props: ScratchDndProps) {
     super(props)
 
+    let enabledOpcodes: boolean = false
     let opPushValues: { [key: string]: string } = {}
 
     const initialStateItems: ItemType[] = []
@@ -151,10 +140,32 @@ export default class ScratchDnd extends Component<
       }
     }
 
+    let filteredOpcodes = enabledOpcodes
+      ? ITEMS
+      : ITEMS.filter((opcode) => !experimentalOpCodes.includes(opcode.content))
+
+    let groupedItems: Group[] = filteredOpcodes.reduce(
+      (groups: Group[], item: ItemType) => {
+        const group = groups.find((g) => g.heading === item.category)
+        if (group) {
+          group.items.push(item)
+        } else {
+          groups.push({
+            heading: item.category,
+            items: [item],
+          })
+        }
+        return groups
+      },
+      []
+    )
+
     this.state = {
       dynamicState: {
         [uuid()]: initialStateItems,
       },
+      groupedItems,
+      enabledOpcodes,
       opPushValues,
     }
   }
@@ -178,6 +189,34 @@ export default class ScratchDnd extends Component<
         input.setSelectionRange(caretPosition, caretPosition)
       }
     )
+  }
+
+  handleEnableExperimental = () => {
+    this.setState((prevState) => {
+      const newEnabledOpcodes = !prevState.enabledOpcodes
+
+      let filteredItems = newEnabledOpcodes
+        ? ITEMS
+        : ITEMS.filter((item) => !experimentalOpCodes.includes(item.content))
+
+      let updatedGroupedItems: Group[] = filteredItems.reduce(
+        (groups: Group[], item: ItemType) => {
+          const group = groups.find((g) => g.heading === item.category)
+          if (group) {
+            group.items.push(item)
+          } else {
+            groups.push({ heading: item.category, items: [item] })
+          }
+          return groups
+        },
+        []
+      )
+
+      return {
+        enabledOpcodes: newEnabledOpcodes,
+        groupedItems: updatedGroupedItems,
+      }
+    })
   }
 
   handlePasteFromClipboard = async () => {
@@ -354,6 +393,7 @@ export default class ScratchDnd extends Component<
 
     if (this.props.onItemsUpdate) {
       this.props.onItemsUpdate(processedItems)
+      this.props.onEnableOpcodes(this.state.enabledOpcodes)
     }
   }
 
@@ -367,7 +407,7 @@ export default class ScratchDnd extends Component<
                 Your script
               </p>
               <Droppable key={list} droppableId={list} direction="horizontal">
-                {(provided, snapshot) => (
+                {(provided, _snapshot) => (
                   <div
                     className={clsx(
                       'flex h-[40px] w-full flex-row whitespace-nowrap font-space-mono',
@@ -387,7 +427,7 @@ export default class ScratchDnd extends Component<
                           draggableId={item.id.toString()}
                           index={index}
                         >
-                          {(provided, snapshot) => (
+                          {(provided, _snapshot) => (
                             <div
                               id={item.id}
                               className={clsx(
@@ -449,13 +489,13 @@ export default class ScratchDnd extends Component<
           isDropDisabled={true}
           direction="horizontal"
         >
-          {(provided, snapshot) => (
+          {(provided, _snapshot) => (
             <div
               className="flex h-full flex-col gap-y-2.5 overflow-y-auto bg-black/10 px-5 py-[15px]"
               dir="rtl"
               ref={provided.innerRef}
             >
-              {groupedItems.map((group, groupIndex) => (
+              {this.state.groupedItems.map((group, groupIndex) => (
                 <div
                   key={groupIndex}
                   className="flex flex-row-reverse font-space-mono"
@@ -464,7 +504,7 @@ export default class ScratchDnd extends Component<
                     {group.heading}
                   </h2>
                   <div className="flex w-full flex-row-reverse flex-wrap gap-y-2.5 overflow-x-auto pl-1">
-                    {group.items.map((item, index) => (
+                    {group.items.map((item, _index) => (
                       <Draggable
                         key={item.id}
                         draggableId={item.id.toString()}
@@ -544,6 +584,15 @@ export default class ScratchDnd extends Component<
           )}
         </Droppable>
         <div className="flex justify-end bg-black/10">
+          <button
+            className="false m-2 inline-block max-w-[max-content] justify-center rounded-[3px] bg-white px-12 px-2.5 py-1 text-center font-nunito text-base font-bold  text-back transition duration-150 ease-in-out hover:bg-white/75"
+            onClick={() => this.handleEnableExperimental()}
+          >
+            {this.state.enabledOpcodes
+              ? 'Disable Experimental Opcodes'
+              : 'Enable Experimental Opcodes'}
+          </button>
+
           <button
             className="false m-2 inline-block max-w-[max-content] justify-center rounded-[3px] bg-white px-12 px-2.5 py-1 text-center font-nunito text-base font-bold  text-back transition duration-150 ease-in-out hover:bg-white/75"
             onClick={() => this.handlePasteFromClipboard()}
