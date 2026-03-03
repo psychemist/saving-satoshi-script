@@ -361,6 +361,57 @@ export const opFunctions: { [key: string]: Function } = {
       error: null,
     }
   },
+  OP_CHECKSIGADD: (stack: StackType) => {
+    if (!stack) return null
+    if (stack?.length < 3) {
+      return {
+        value: null,
+        error: 'OP_CHECKSIGADD requires 3 items on the stack',
+      }
+    }
+    const pubkey = stack.pop()
+    const n = Number(stack.pop())
+    const sig = stack.pop()
+
+    if (!Number.isInteger(n)) {
+      return {
+        value: null,
+        error: `OP_CHECKSIGADD: invalid counter value: ${n}`,
+      }
+    }
+
+    const key = getKey(pubkey)?.value?.toUpperCase()
+    const sigVal = getSig(sig)?.value?.toUpperCase()
+
+    if (!key) {
+      return {
+        value: null,
+        error: 'OP_CHECKSIGADD: invalid public key',
+      }
+    }
+
+    // If signature is empty, push n unchanged
+    if (!sig || sig === '' || sig === 0 || sig === '0') {
+      return {
+        value: n,
+        error: null,
+      }
+    }
+
+    if (!sigVal) {
+      return {
+        value: null,
+        error: `OP_CHECKSIGADD: invalid signature: ${sig}`,
+      }
+    }
+
+    // If signature matches pubkey, push n + 1; otherwise push n
+    const valid = key === sigVal
+    return {
+      value: valid ? n + 1 : n,
+      error: null,
+    }
+  },
   OP_CHECKMULTISIG: (stack: StackType) => {
     if (!stack) return null
     if (stack?.length < 1) {
@@ -627,6 +678,7 @@ export const OpCodeTypes = {
   OP_HASH160: 'crypto',
   OP_HASH256: 'crypto',
   OP_CHECKSIG: 'crypto',
+  OP_CHECKSIGADD: 'crypto',
   OP_CHECKMULTISIG: 'crypto',
 
   OP_EQUAL: 'bitwise',
@@ -684,6 +736,7 @@ export const OpCodeHex = {
   OP_HASH256: 'aa',
   OP_CHECKSIG: 'ac',
   OP_CHECKMULTISIG: 'ae',
+  OP_CHECKSIGADD: 'ba',
 
   OP_EQUAL: '87',
   OP_EQUALVERIFY: '88',
