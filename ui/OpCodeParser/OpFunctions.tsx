@@ -369,6 +369,7 @@ export const opFunctions: { [key: string]: Function } = {
         error: 'OP_CHECKSIGADD requires 3 items on the stack',
       }
     }
+
     const pubkey = stack.pop()
     const n = Number(stack.pop())
     const sig = stack.pop()
@@ -380,17 +381,21 @@ export const opFunctions: { [key: string]: Function } = {
       }
     }
 
-    const key = getKey(pubkey)?.value?.toUpperCase()
-    const sigVal = getSig(sig)?.value?.toUpperCase()
-
-    if (!key) {
+    if (n < 0) {
       return {
         value: null,
-        error: 'OP_CHECKSIGADD: invalid public key',
+        error: `OP_CHECKSIGADD: counter n must be non-negative, got: ${n}`,
       }
     }
 
-    // If signature is empty, push n unchanged
+    const key = getKey(pubkey)?.value?.toUpperCase()
+    if (!key) {
+      return {
+        value: null,
+        error: `OP_CHECKSIGADD: invalid public key: ${pubkey}`,
+      }
+    }
+
     if (!sig || sig === '' || sig === 0 || sig === '0') {
       return {
         value: n,
@@ -398,17 +403,23 @@ export const opFunctions: { [key: string]: Function } = {
       }
     }
 
+    const sigVal = getSig(sig)?.value?.toUpperCase()
     if (!sigVal) {
       return {
         value: null,
-        error: `OP_CHECKSIGADD: invalid signature: ${sig}`,
+        error: `OP_CHECKSIGADD: invalid signature format: ${sig}`,
       }
     }
 
-    // If signature matches pubkey, push n + 1; otherwise push n
-    const valid = key === sigVal
+    if (key !== sigVal) {
+      return {
+        value: null,
+        error: `OP_CHECKSIGADD: non-empty signature failed verification (NULLFAIL)`,
+      }
+    }
+
     return {
-      value: valid ? n + 1 : n,
+      value: n + 1,
       error: null,
     }
   },
