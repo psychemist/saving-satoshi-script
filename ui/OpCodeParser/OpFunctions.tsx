@@ -377,7 +377,7 @@ export const opFunctions: { [key: string]: Function } = {
     if (!Number.isInteger(n)) {
       return {
         value: null,
-        error: `OP_CHECKSIGADD: invalid counter value: ${n}`,
+        error: `OP_CHECKSIGADD: requires second value to be an unsigned integer`,
       }
     }
 
@@ -414,7 +414,7 @@ export const opFunctions: { [key: string]: Function } = {
     if (key !== sigVal) {
       return {
         value: null,
-        error: `OP_CHECKSIGADD: non-empty signature failed verification (NULLFAIL)`,
+        error: `OP_CHECKSIGADD: non-empty signature failed verification`,
       }
     }
 
