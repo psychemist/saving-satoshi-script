@@ -377,14 +377,14 @@ export const opFunctions: { [key: string]: Function } = {
     if (!Number.isInteger(n)) {
       return {
         value: null,
-        error: `OP_CHECKSIGADD: requires second value to be an unsigned integer`,
+        error: `OP_CHECKSIGADD: requires second value to be an integer`,
       }
     }
 
-    if (n < 0) {
+    if (n < -2147483648 || n > 2147483647) {
       return {
         value: null,
-        error: `OP_CHECKSIGADD: counter n must be non-negative, got: ${n}`,
+        error: `OP_CHECKSIGADD: counter n must be within 4 bytes, got: ${n}`,
       }
     }
 
